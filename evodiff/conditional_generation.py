@@ -160,10 +160,18 @@ def main():
             ". If you want to generate a random baseline, add the --random-baseline flag to any model.")
 
     model, collater, tokenizer, scheme = checkpoint
-    model.eval().cuda()
-
-    torch.cuda.set_device(args.gpus)
-    device = torch.device('cuda:' + str(args.gpus))
+    # [sdaa-adapt] 设备探测：优先 sdaa，其次 cuda，最后 cpu
+    if hasattr(torch, 'sdaa') and torch.sdaa.is_available():
+        torch.sdaa.set_device(args.gpus)
+        device = torch.device('sdaa:' + str(args.gpus))
+        model = model.eval().to(device)
+    elif torch.cuda.is_available():
+        torch.cuda.set_device(args.gpus)
+        device = torch.device('cuda:' + str(args.gpus))
+        model = model.eval().to(device)
+    else:
+        device = torch.device('cpu')
+        model = model.eval()
 
     if args.amlt:
         home = os.getenv('AMLT_OUTPUT_DIR', '/tmp') + '/'

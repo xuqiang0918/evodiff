@@ -75,8 +75,15 @@ def main():
     else:
         model, collater, tokenizer, scheme = checkpoint
 
-    torch.cuda.set_device(args.gpus)
-    device = torch.device('cuda:' + str(args.gpus))
+    # [sdaa-adapt] 设备探测：优先 sdaa，其次 cuda，最后 cpu
+    if hasattr(torch, 'sdaa') and torch.sdaa.is_available():
+        torch.sdaa.set_device(args.gpus)
+        device = torch.device('sdaa:' + str(args.gpus))
+    elif torch.cuda.is_available():
+        torch.cuda.set_device(args.gpus)
+        device = torch.device('cuda:' + str(args.gpus))
+    else:
+        device = torch.device('cpu')
     model = model.eval().to(device)
 
     # Out directories
