@@ -63,8 +63,8 @@ MSA 模式（`generate_msa.py` / `conditional_generation_msa.py`，`msa_oa_dm_ma
   `$TORCH_HOME/hub/checkpoints/`（`MSA_OA_DM_MAXSUB` 内部同样加载 `msa-oaar-maxsub`）；
 - 元数据 `data/openfold/*.npz`（depths/lengths，4.8MB）随仓库数据目录就位；
 - 实测：`python evodiff/generate_msa.py --model-type msa_oa_dm_maxsub --n-sequences 8 --seq-length 64`
-  512 步去噪 7.5 it/s（约 68 秒），产出 `generated_msas.a3m` / `.npy`，MSA 结构正常
-  （1 条 query + 7 条比对序列，gap 分布合理）。
+  总耗时 74.2 秒（512 步去噪 7.5 it/s，约 68 秒），**峰值显存 464.1 MB**，产出
+  `generated_msas.a3m` / `.npy`，MSA 结构正常（1 条 query + 7 条比对序列，gap 分布合理）。
 
 说明：无条件 MSA 生成（不带 `--start-query` / `--start-msa`）**不依赖** OpenFold 数据库；仅
 条件生成（从 query/MSA 起步）需要完整 OpenFold 数据。
