@@ -1,0 +1,54 @@
+From 47be9c2425ba73ba35307ecb693e32e41546d9b9 Mon Sep 17 00:00:00 2001
+From: xuqiang <00771xq@tecorigin.com>
+Date: Fri, 28 Aug 2026 17:38:04 +0800
+Subject: [PATCH 6/6] =?UTF-8?q?[sdaa-adapt]=20MSA=20=E6=97=A0=E6=9D=A1?=
+ =?UTF-8?q?=E4=BB=B6=E7=94=9F=E6=88=90=E9=AA=8C=E8=AF=81=E9=80=9A=E8=BF=87?=
+ =?UTF-8?q?=EF=BC=8C=E6=96=87=E6=A1=A3=E8=A1=A5=E5=85=85=E5=AE=9E=E6=B5=8B?=
+ =?UTF-8?q?=E8=AE=B0=E5=BD=95?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ sdaa/SDAA_ADAPTATION.md | 16 +++++++++++-----
+ 1 file changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/sdaa/SDAA_ADAPTATION.md b/sdaa/SDAA_ADAPTATION.md
+index abcbb8e..a635b99 100644
+--- a/sdaa/SDAA_ADAPTATION.md
++++ b/sdaa/SDAA_ADAPTATION.md
+@@ -56,12 +56,18 @@
+ 
+ ### 3.3 MSA 模式
+ 
+-MSA 模式（`generate_msa.py` / `conditional_generation_msa.py`，MSA_OA_DM_MAXSUB 模型）的**设备探测
+-改造已完成**（与主脚本同款 sdaa→cuda→cpu 探测）。权重 `msa-oaar-maxsub.tar`（1.28 GB，Zenodo
+-record 8045076）获取中，生成验证待权重就位后补充。
++MSA 模式（`generate_msa.py` / `conditional_generation_msa.py`，`msa_oa_dm_maxsub`）的设备探测
++改造与主脚本同款（sdaa→cuda→cpu）。**无条件 MSA 生成已在 SDAA 上验证通过**：
++
++- 权重 `msa-oaar-maxsub.tar`（1.28 GB，Zenodo record 8045076），与无条件生成共用
++  `$TORCH_HOME/hub/checkpoints/`（`MSA_OA_DM_MAXSUB` 内部同样加载 `msa-oaar-maxsub`）；
++- 元数据 `data/openfold/*.npz`（depths/lengths，4.8MB）随仓库数据目录就位；
++- 实测：`python evodiff/generate_msa.py --model-type msa_oa_dm_maxsub --n-sequences 8 --seq-length 64`
++  512 步去噪 7.5 it/s（约 68 秒），产出 `generated_msas.a3m` / `.npy`，MSA 结构正常
++  （1 条 query + 7 条比对序列，gap 分布合理）。
+ 
+ 说明：无条件 MSA 生成（不带 `--start-query` / `--start-msa`）**不依赖** OpenFold 数据库；仅
+-条件生成（从 query/MSA 起步）需要 `data/openfold/`。
++条件生成（从 query/MSA 起步）需要完整 OpenFold 数据。
+ 
+ ---
+ 
+@@ -96,7 +102,7 @@ SDAA 卡上，无 CPU fallback。
+ 1. **长序列生成性能差距扩大**：OA-DM 生成机制为 L 次串行 forward（机制性 O(L)）；CUDA 上单步
+    forward 耗时随 L 基本持平，SDAA 上随 L 增长（128→1024 涨 42%），导致整体差距从 2.4×（L=128）
+    扩大到 6.1×（L=1024）。
+-2. **MSA 模式生成验证待权重就位**（设备改造已完成，见 3.3）。
++2. **MSA 条件生成（`--start-query` / `--start-msa`）未验证**：需完整 OpenFold 数据库，未验证。
+ 3. **driver api / driver version 不一致 warning**：运行时打印，不影响功能。
+ 4. 官方 `generate.py` 的 baseline 对比绘图依赖 UniRef50 数据集；`run_evodiff_min.py` 不依赖。
+ 
+-- 
+2.41.0
+
