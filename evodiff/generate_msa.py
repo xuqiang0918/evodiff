@@ -41,8 +41,15 @@ def main():
     #_ = torch.manual_seed(0)
     np.random.seed(0)
 
-    torch.cuda.set_device(args.gpus + args.offset)
-    device = torch.device('cuda:' + str(args.gpus + args.offset))
+    # [sdaa-adapt] 设备探测：优先 sdaa，其次 cuda，最后 cpu
+    if hasattr(torch, 'sdaa') and torch.sdaa.is_available():
+        torch.sdaa.set_device(args.gpus + args.offset)
+        device = torch.device('sdaa:' + str(args.gpus + args.offset))
+    elif torch.cuda.is_available():
+        torch.cuda.set_device(args.gpus + args.offset)
+        device = torch.device('cuda:' + str(args.gpus + args.offset))
+    else:
+        device = torch.device('cpu')
 
     d3pm = False
     if args.model_type == 'msa_oa_dm_randsub':

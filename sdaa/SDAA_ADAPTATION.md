@@ -54,9 +54,14 @@
 | `sdaa/SDAA_ADAPTATION.md` | 本文档 |
 | `sdaa/patches/` | git format-patch 补丁归档 |
 
-### 3.3 未适配部分
+### 3.3 MSA 模式
 
-- **MSA 模式**（`generate_msa.py` / `conditional_generation_msa.py`，MSA_OA_AR_DM 模型）尚未适配——依赖 OpenFold MSA 数据库，权重与数据未就绪，未验证。
+MSA 模式（`generate_msa.py` / `conditional_generation_msa.py`，MSA_OA_DM_MAXSUB 模型）的**设备探测
+改造已完成**（与主脚本同款 sdaa→cuda→cpu 探测）。权重 `msa-oaar-maxsub.tar`（1.28 GB，Zenodo
+record 8045076）获取中，生成验证待权重就位后补充。
+
+说明：无条件 MSA 生成（不带 `--start-query` / `--start-msa`）**不依赖** OpenFold 数据库；仅
+条件生成（从 query/MSA 起步）需要 `data/openfold/`。
 
 ---
 
@@ -91,7 +96,7 @@ SDAA 卡上，无 CPU fallback。
 1. **长序列生成性能差距扩大**：OA-DM 生成机制为 L 次串行 forward（机制性 O(L)）；CUDA 上单步
    forward 耗时随 L 基本持平，SDAA 上随 L 增长（128→1024 涨 42%），导致整体差距从 2.4×（L=128）
    扩大到 6.1×（L=1024）。
-2. **MSA 模式未适配**（见 3.3）。
+2. **MSA 模式生成验证待权重就位**（设备改造已完成，见 3.3）。
 3. **driver api / driver version 不一致 warning**：运行时打印，不影响功能。
 4. 官方 `generate.py` 的 baseline 对比绘图依赖 UniRef50 数据集；`run_evodiff_min.py` 不依赖。
 
@@ -127,17 +132,26 @@ SDAA 卡上，无 CPU fallback。
 
 - `torch.sdaa` 正确识别（32 卡，`/dev/tcaicard0`）；
 - 全链路设备检查：模型参数 / 输入 / 输出 / multinomial 采样全部位于 `sdaa:0`，无 CPU fallback；
-- `py_compile` 已于本次适配改造后执行通过（`generate.py` / `conditional_generation.py`）；
+- `py_compile` 已于本次适配改造后执行通过（`generate.py` / `conditional_generation.py` / `generate_msa.py` / `conditional_generation_msa.py`）；
 - 改造后冒烟：gen 128 → 3.10 s / 41.2 aa/s / peak 151 MB，功能正常。
+
+**官方 CLI 端到端验证**
+
+```
+python evodiff/generate.py --model-type oa_dm_38M --num-seqs 2
+```
+
+- 生成完成（152 步去噪，41.9 it/s），输出 2 条序列，KL = 0.027（与天然序列分布的距离，越低越好）；
+- 产物齐全：`generated_samples_string.csv` / `.fasta`、`parity_scatter.png`、`generate_metrics.csv`。
 
 **适配命令**
 
 ```bash
-# 官方无条件生成 CLI（<repo> 为仓库根目录）
+# 官方无条件生成 CLI（<repo> 为仓库根目录；需 data/uniref50 与 ref/uniref50_aa_ref_test.csv 就位）
 source /opt/tecoai/setvars.sh
 export TORCH_HOME=<权重目录>
 cd <repo>
-python evodiff/generate.py --model-dir oa_ar_dsm_38M --num-seqs 100 --seq-len 256
+python evodiff/generate.py --model-type oa_dm_38M --num-seqs 2
 
 # 辅助基线（性能/显存/生成/ppl 一步到位）
 bash sdaa/scripts/run_benchmark.sh              # 默认生成 100 条
