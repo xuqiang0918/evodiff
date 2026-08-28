@@ -1,0 +1,129 @@
+From 1daa47c42580a28627ec3fb77fe0aca3b39ea46c Mon Sep 17 00:00:00 2001
+From: xuqiang <00771xq@tecorigin.com>
+Date: Fri, 28 Aug 2026 16:47:05 +0800
+Subject: [PATCH 4/4] =?UTF-8?q?[sdaa-adapt]=20MSA=20=E8=84=9A=E6=9C=AC?=
+ =?UTF-8?q?=E8=AE=BE=E5=A4=87=E6=8E=A2=E6=B5=8B=E6=94=B9=E9=80=A0=EF=BC=8C?=
+ =?UTF-8?q?=E6=96=87=E6=A1=A3=E8=A1=A5=E5=85=85=E5=AE=98=E6=96=B9=20CLI=20?=
+ =?UTF-8?q?=E7=AB=AF=E5=88=B0=E7=AB=AF=E9=AA=8C=E8=AF=81=E8=AE=B0=E5=BD=95?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ evodiff/conditional_generation_msa.py | 16 ++++++++++++----
+ evodiff/generate_msa.py               | 11 +++++++++--
+ sdaa/SDAA_ADAPTATION.md               | 26 ++++++++++++++++++++------
+ 3 files changed, 41 insertions(+), 12 deletions(-)
+
+diff --git a/evodiff/conditional_generation_msa.py b/evodiff/conditional_generation_msa.py
+index 39911da..47895fd 100644
+--- a/evodiff/conditional_generation_msa.py
++++ b/evodiff/conditional_generation_msa.py
+@@ -75,10 +75,18 @@ def main():
+         raise Exception("Please select either msa_oa_dm_randsub, msa_oa_dm_maxsub, or esm_msa_1b baseline. You selected:", args.model_type)
+ 
+     model, collater, tokenizer, scheme = checkpoint
+-    model.eval().cuda()
+-
+-    torch.cuda.set_device(args.gpus)
+-    device = torch.device('cuda:' + str(args.gpus))
++    # [sdaa-adapt] 设备探测：优先 sdaa，其次 cuda，最后 cpu
++    if hasattr(torch, 'sdaa') and torch.sdaa.is_available():
++        torch.sdaa.set_device(args.gpus)
++        device = torch.device('sdaa:' + str(args.gpus))
++        model = model.eval().to(device)
++    elif torch.cuda.is_available():
++        torch.cuda.set_device(args.gpus)
++        device = torch.device('cuda:' + str(args.gpus))
++        model = model.eval().to(device)
++    else:
++        device = torch.device('cpu')
++        model = model.eval()
+ 
+     if args.amlt:
+         home = os.getenv('AMLT_OUTPUT_DIR', '/tmp') + '/'
+diff --git a/evodiff/generate_msa.py b/evodiff/generate_msa.py
+index d1757ca..7ee07bd 100644
+--- a/evodiff/generate_msa.py
++++ b/evodiff/generate_msa.py
+@@ -41,8 +41,15 @@ def main():
+     #_ = torch.manual_seed(0)
+     np.random.seed(0)
+ 
+-    torch.cuda.set_device(args.gpus + args.offset)
+-    device = torch.device('cuda:' + str(args.gpus + args.offset))
++    # [sdaa-adapt] 设备探测：优先 sdaa，其次 cuda，最后 cpu
++    if hasattr(torch, 'sdaa') and torch.sdaa.is_available():
++        torch.sdaa.set_device(args.gpus + args.offset)
++        device = torch.device('sdaa:' + str(args.gpus + args.offset))
++    elif torch.cuda.is_available():
++        torch.cuda.set_device(args.gpus + args.offset)
++        device = torch.device('cuda:' + str(args.gpus + args.offset))
++    else:
++        device = torch.device('cpu')
+ 
+     d3pm = False
+     if args.model_type == 'msa_oa_dm_randsub':
+diff --git a/sdaa/SDAA_ADAPTATION.md b/sdaa/SDAA_ADAPTATION.md
+index 5e3c320..abcbb8e 100644
+--- a/sdaa/SDAA_ADAPTATION.md
++++ b/sdaa/SDAA_ADAPTATION.md
+@@ -54,9 +54,14 @@
+ | `sdaa/SDAA_ADAPTATION.md` | 本文档 |
+ | `sdaa/patches/` | git format-patch 补丁归档 |
+ 
+-### 3.3 未适配部分
++### 3.3 MSA 模式
+ 
+-- **MSA 模式**（`generate_msa.py` / `conditional_generation_msa.py`，MSA_OA_AR_DM 模型）尚未适配——依赖 OpenFold MSA 数据库，权重与数据未就绪，未验证。
++MSA 模式（`generate_msa.py` / `conditional_generation_msa.py`，MSA_OA_DM_MAXSUB 模型）的**设备探测
++改造已完成**（与主脚本同款 sdaa→cuda→cpu 探测）。权重 `msa-oaar-maxsub.tar`（1.28 GB，Zenodo
++record 8045076）获取中，生成验证待权重就位后补充。
++
++说明：无条件 MSA 生成（不带 `--start-query` / `--start-msa`）**不依赖** OpenFold 数据库；仅
++条件生成（从 query/MSA 起步）需要 `data/openfold/`。
+ 
+ ---
+ 
+@@ -91,7 +96,7 @@ SDAA 卡上，无 CPU fallback。
+ 1. **长序列生成性能差距扩大**：OA-DM 生成机制为 L 次串行 forward（机制性 O(L)）；CUDA 上单步
+    forward 耗时随 L 基本持平，SDAA 上随 L 增长（128→1024 涨 42%），导致整体差距从 2.4×（L=128）
+    扩大到 6.1×（L=1024）。
+-2. **MSA 模式未适配**（见 3.3）。
++2. **MSA 模式生成验证待权重就位**（设备改造已完成，见 3.3）。
+ 3. **driver api / driver version 不一致 warning**：运行时打印，不影响功能。
+ 4. 官方 `generate.py` 的 baseline 对比绘图依赖 UniRef50 数据集；`run_evodiff_min.py` 不依赖。
+ 
+@@ -127,17 +132,26 @@ SDAA 卡上，无 CPU fallback。
+ 
+ - `torch.sdaa` 正确识别（32 卡，`/dev/tcaicard0`）；
+ - 全链路设备检查：模型参数 / 输入 / 输出 / multinomial 采样全部位于 `sdaa:0`，无 CPU fallback；
+-- `py_compile` 已于本次适配改造后执行通过（`generate.py` / `conditional_generation.py`）；
++- `py_compile` 已于本次适配改造后执行通过（`generate.py` / `conditional_generation.py` / `generate_msa.py` / `conditional_generation_msa.py`）；
+ - 改造后冒烟：gen 128 → 3.10 s / 41.2 aa/s / peak 151 MB，功能正常。
+ 
++**官方 CLI 端到端验证**
++
++```
++python evodiff/generate.py --model-type oa_dm_38M --num-seqs 2
++```
++
++- 生成完成（152 步去噪，41.9 it/s），输出 2 条序列，KL = 0.027（与天然序列分布的距离，越低越好）；
++- 产物齐全：`generated_samples_string.csv` / `.fasta`、`parity_scatter.png`、`generate_metrics.csv`。
++
+ **适配命令**
+ 
+ ```bash
+-# 官方无条件生成 CLI（<repo> 为仓库根目录）
++# 官方无条件生成 CLI（<repo> 为仓库根目录；需 data/uniref50 与 ref/uniref50_aa_ref_test.csv 就位）
+ source /opt/tecoai/setvars.sh
+ export TORCH_HOME=<权重目录>
+ cd <repo>
+-python evodiff/generate.py --model-dir oa_ar_dsm_38M --num-seqs 100 --seq-len 256
++python evodiff/generate.py --model-type oa_dm_38M --num-seqs 2
+ 
+ # 辅助基线（性能/显存/生成/ppl 一步到位）
+ bash sdaa/scripts/run_benchmark.sh              # 默认生成 100 条
+-- 
+2.41.0
+
