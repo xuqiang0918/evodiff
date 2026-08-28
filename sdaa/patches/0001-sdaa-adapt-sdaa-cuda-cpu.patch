@@ -1,0 +1,68 @@
+From 1159a154dbd56701dd96cd4f0bd074d00bb81a66 Mon Sep 17 00:00:00 2001
+From: xuqiang <00771xq@tecorigin.com>
+Date: Fri, 28 Aug 2026 16:24:29 +0800
+Subject: [PATCH 1/2] =?UTF-8?q?[sdaa-adapt]=20=E5=AE=98=E6=96=B9=E7=94=9F?=
+ =?UTF-8?q?=E6=88=90=E8=84=9A=E6=9C=AC=E8=AE=BE=E5=A4=87=E6=8E=A2=E6=B5=8B?=
+ =?UTF-8?q?=E5=8F=8C=E5=85=BC=E5=AE=B9=EF=BC=88sdaa=E2=86=92cuda=E2=86=92c?=
+ =?UTF-8?q?pu=EF=BC=89?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ evodiff/conditional_generation.py | 16 ++++++++++++----
+ evodiff/generate.py               | 11 +++++++++--
+ 2 files changed, 21 insertions(+), 6 deletions(-)
+
+diff --git a/evodiff/conditional_generation.py b/evodiff/conditional_generation.py
+index 21562b0..986e518 100644
+--- a/evodiff/conditional_generation.py
++++ b/evodiff/conditional_generation.py
+@@ -160,10 +160,18 @@ def main():
+             ". If you want to generate a random baseline, add the --random-baseline flag to any model.")
+ 
+     model, collater, tokenizer, scheme = checkpoint
+-    model.eval().cuda()
+-
+-    torch.cuda.set_device(args.gpus)
+-    device = torch.device('cuda:' + str(args.gpus))
++    # [sdaa-adapt] 设备探测：优先 sdaa，其次 cuda，最后 cpu
++    if hasattr(torch, 'sdaa') and torch.sdaa.is_available():
++        torch.sdaa.set_device(args.gpus)
++        device = torch.device('sdaa:' + str(args.gpus))
++        model = model.eval().to(device)
++    elif torch.cuda.is_available():
++        torch.cuda.set_device(args.gpus)
++        device = torch.device('cuda:' + str(args.gpus))
++        model = model.eval().to(device)
++    else:
++        device = torch.device('cpu')
++        model = model.eval()
+ 
+     if args.amlt:
+         home = os.getenv('AMLT_OUTPUT_DIR', '/tmp') + '/'
+diff --git a/evodiff/generate.py b/evodiff/generate.py
+index 566b62a..50a0df3 100644
+--- a/evodiff/generate.py
++++ b/evodiff/generate.py
+@@ -75,8 +75,15 @@ def main():
+     else:
+         model, collater, tokenizer, scheme = checkpoint
+ 
+-    torch.cuda.set_device(args.gpus)
+-    device = torch.device('cuda:' + str(args.gpus))
++    # [sdaa-adapt] 设备探测：优先 sdaa，其次 cuda，最后 cpu
++    if hasattr(torch, 'sdaa') and torch.sdaa.is_available():
++        torch.sdaa.set_device(args.gpus)
++        device = torch.device('sdaa:' + str(args.gpus))
++    elif torch.cuda.is_available():
++        torch.cuda.set_device(args.gpus)
++        device = torch.device('cuda:' + str(args.gpus))
++    else:
++        device = torch.device('cpu')
+     model = model.eval().to(device)
+ 
+     # Out directories
+-- 
+2.41.0
+
