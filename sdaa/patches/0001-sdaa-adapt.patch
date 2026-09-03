@@ -1,0 +1,39 @@
+From b20ab7128312e46867bdd5a3b120fb681a860da1 Mon Sep 17 00:00:00 2001
+From: xuqiang <00771xq@tecorigin.com>
+Date: Thu, 3 Sep 2026 10:54:01 +0800
+Subject: [PATCH] =?UTF-8?q?[sdaa-adapt]=20=E6=96=87=E6=A1=A3=E4=BF=AE?=
+ =?UTF-8?q?=E6=AD=A3=EF=BC=9A=E5=8F=8C=E5=85=BC=E5=AE=B9=E8=A1=A8=E8=BF=B0?=
+ =?UTF-8?q?=E6=94=B9=E4=B8=BA=E5=AE=9E=E6=B5=8B=E5=8F=A3=E5=BE=84?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ sdaa/SDAA_ADAPTATION.md | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/sdaa/SDAA_ADAPTATION.md b/sdaa/SDAA_ADAPTATION.md
+index e8e3599..dc04531 100644
+--- a/sdaa/SDAA_ADAPTATION.md
++++ b/sdaa/SDAA_ADAPTATION.md
+@@ -32,7 +32,7 @@
+ - 兜底 `cpu`
+ 
+ 探测到的 device 显式传入各生成函数（`generate_oaardm` / `inpaint` 等），函数默认参数保持官方原值
+-（`'cuda'` / `'gpu'`）不变——**CUDA 与 SDAA 双兼容**：同一份代码在两类机器上均可直接运行。
++（`'cuda'` / `'gpu'`）不变——CUDA 分支保持官方原路径。**本适配仅在 SDAA 上做了端到端验证，改造后代码未在 CUDA 上重新验证**。
+ 
+ ---
+ 
+@@ -110,7 +110,7 @@ SDAA 卡上，无 CPU fallback。
+ 
+ ## 7. 性能
+ 
+-> OA_DM_38M fp32，batch=1，无条件生成；SDAA 为龙芯单卡；CUDA 基线为 A100-40GB。
++> OA_DM_38M fp32，batch=1，无条件生成；SDAA 为龙芯单卡；CUDA 基线为 A100-40GB（首次适配阶段、探测式改造前的代码实测；改造后代码未在 CUDA 复测）。
+ 
+ ### 7.1 无条件生成吞吐（num_seqs=1）
+ 
+-- 
+2.41.0
+
