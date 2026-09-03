@@ -1,0 +1,3 @@
+# runtime data (symlink to local dataset, not part of the adaptation)
+data/uniref50
+__pycache__/
