@@ -32,7 +32,7 @@
 - 兜底 `cpu`
 
 探测到的 device 显式传入各生成函数（`generate_oaardm` / `inpaint` 等），函数默认参数保持官方原值
-（`'cuda'` / `'gpu'`）不变——**CUDA 与 SDAA 双兼容**：同一份代码在两类机器上均可直接运行。
+（`'cuda'` / `'gpu'`）不变——CUDA 分支保持官方原路径。**本适配仅在 SDAA 上做了端到端验证，改造后代码未在 CUDA 上重新验证**。
 
 ---
 
@@ -110,7 +110,7 @@ SDAA 卡上，无 CPU fallback。
 
 ## 7. 性能
 
-> OA_DM_38M fp32，batch=1，无条件生成；SDAA 为龙芯单卡；CUDA 基线为 A100-40GB。
+> OA_DM_38M fp32，batch=1，无条件生成；SDAA 为龙芯单卡；CUDA 基线为 A100-40GB（首次适配阶段、探测式改造前的代码实测；改造后代码未在 CUDA 复测）。
 
 ### 7.1 无条件生成吞吐（num_seqs=1）
 
