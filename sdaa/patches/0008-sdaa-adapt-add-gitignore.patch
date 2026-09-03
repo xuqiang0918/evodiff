@@ -1,0 +1,22 @@
+From 6795ddf5c5f1e4a1c1dc29b0ce568d56a014967f Mon Sep 17 00:00:00 2001
+From: xuqiang <00771xq@tecorigin.com>
+Date: Thu, 3 Sep 2026 11:16:24 +0800
+Subject: [PATCH] [sdaa-adapt] add .gitignore for runtime data
+
+---
+ .gitignore | 3 +++
+ 1 file changed, 3 insertions(+)
+ create mode 100644 .gitignore
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..feb1eff
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,3 @@
++# runtime data (symlink to local dataset, not part of the adaptation)
++data/uniref50
++__pycache__/
+-- 
+2.41.0
+
